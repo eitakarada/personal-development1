@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>トップページ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css?family=Sawarabi+Mincho" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Sawarabi Mincho', serif;
+        }
+    </style>
+    <link rel="stylesheet" href="styles/stars.css">
+</head>
+<body class="min-h-screen  bg-gradient-to-b from-slate-950 via-indigo-950 to-sky-950">
+    <img class="mx-auto  -mb-36 h-96" src="./asstes/img/word-star main-icon.png" alt="">
+    <div class="flex flex-col gap-8 justify-center  m-auto mt-36 bg-blue-700/30 rounded-lg h-96 w-96">
+        <div class="bg-[#020617] hover:bg-[#1e1b4b] h-28 w-48 rounded-lg flex align-center m-auto justify-center">
+        <a href="auth/registar.html" class="inline-block w-full h-full flex items-center justify-center">
+            <span class=" bg-gradient-to-r from-yellow-200 via-amber-300 to-yellow-100 bg-clip-text text-transparent font-bold text-2xl">新規登録</span>
+        </a>
+        </div>
+        <div class="bg-[#020617] hover:bg-[#1e1b4b] h-28 w-48 rounded-lg flex align-center justify-center m-auto">
+        <a href="auth/login.html" class="inline-block w-full h-full flex items-center justify-center">
+            <span class=" bg-gradient-to-r from-yellow-200 via-amber-300 to-yellow-100 bg-clip-text text-transparent font-bold text-2xl">ログイン</span>
+        </a>
+        </div>
+        <div></div>
+    </div>
+    <script src="scripts/stars.js" defer></script>
+</body>
+</html>

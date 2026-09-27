@@ -1,0 +1,4 @@
+project/data/*.sqlite
+project/data/*.sqlite-journal
+project/data/*.sqlite-wal
+project/data/*.sqlite-shm

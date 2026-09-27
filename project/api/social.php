@@ -35,12 +35,12 @@ if ($method === 'GET') {
     try {
         // フレンドかどうかチェック
         if ($targetId > 0 && $targetId !== $myId) {
-            $stmt = $pdo->prepare(
-                'SELECT id FROM friends 
+                        $stmt = $pdo->prepare(
+                                "SELECT id FROM friends 
                  WHERE ((user_id = :uid AND friend_id = :tid) 
                     OR  (user_id = :tid AND friend_id = :uid))
                    AND status = 'accepted'
-                 LIMIT 1'
+                                 LIMIT 1"
             );
             $stmt->execute([':uid' => $myId, ':tid' => $targetId]);
             if (!$stmt->fetch()) {
@@ -134,7 +134,7 @@ if ($method === 'GET') {
         // 自分の星をフレンドが受け取った記録
         elseif ($action === 'received_copies') {
             $stmt = $pdo->prepare(
-                'SELECT ss.id, ss.quote, ss.author, ss.source, ss.emotion, ss.created_at,
+                "SELECT ss.id, ss.quote, ss.author, ss.source, ss.emotion, ss.created_at,
                         ss.original_quote_id, copier.username as copier_username
                  FROM shared_stars ss
                  JOIN users copier ON copier.id = ss.user_id
@@ -143,7 +143,7 @@ if ($method === 'GET') {
                     OR (f.user_id = ss.user_id AND f.friend_id = :uid)
                  ) AND f.status = 'accepted'
                  WHERE ss.original_user_id = :uid
-                 ORDER BY ss.created_at DESC'
+                 ORDER BY ss.created_at DESC"
             );
             $stmt->execute([':uid' => $myId]);
             echo json_encode(['received_copies' => $stmt->fetchAll()]);
@@ -167,12 +167,12 @@ if ($method === 'GET') {
 
             // 自分自身の星、またはフレンドの星のみコメント一覧を見られる
             if ($ownerId !== $myId) {
-                $stmt = $pdo->prepare(
-                    'SELECT id FROM friends 
+                                $stmt = $pdo->prepare(
+                                        "SELECT id FROM friends 
                      WHERE ((user_id = :uid AND friend_id = :oid)
                         OR  (user_id = :oid AND friend_id = :uid))
                        AND status = 'accepted'
-                     LIMIT 1'
+                                         LIMIT 1"
                 );
                 $stmt->execute([':uid' => $myId, ':oid' => $ownerId]);
                 if (!$stmt->fetch()) {
@@ -257,12 +257,12 @@ if ($method === 'POST') {
         }
 
         // フレンドかチェック
-        $stmt = $pdo->prepare(
-            'SELECT id FROM friends 
+                $stmt = $pdo->prepare(
+                        "SELECT id FROM friends 
              WHERE ((user_id = :uid AND friend_id = :oid)
                 OR  (user_id = :oid AND friend_id = :uid))
                AND status = 'accepted'
-             LIMIT 1'
+                         LIMIT 1"
         );
         $stmt->execute([':uid' => $myId, ':oid' => $original['user_id']]);
         if (!$stmt->fetch()) {
@@ -335,12 +335,12 @@ if ($method === 'PUT') {
     try {
         // 自分の星、またはフレンドの星にのみコメントできる
         if ($ownerId !== $myId) {
-            $stmt = $pdo->prepare(
-                'SELECT id FROM friends 
+                        $stmt = $pdo->prepare(
+                                "SELECT id FROM friends 
                  WHERE ((user_id = :uid AND friend_id = :oid)
                     OR  (user_id = :oid AND friend_id = :uid))
                    AND status = 'accepted'
-                 LIMIT 1'
+                                 LIMIT 1"
             );
             $stmt->execute([':uid' => $myId, ':oid' => $ownerId]);
             if (!$stmt->fetch()) {

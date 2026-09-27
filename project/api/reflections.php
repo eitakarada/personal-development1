@@ -42,12 +42,12 @@ if ($method === 'GET') {
         }
         
         if ($ownerId > 0 && $ownerId !== (int)$user['id']) {
-            $friendStmt = $pdo->prepare(
-                'SELECT id FROM friends
+                        $friendStmt = $pdo->prepare(
+                                "SELECT id FROM friends
                  WHERE ((user_id = :uid AND friend_id = :oid)
                     OR (user_id = :oid AND friend_id = :uid))
                    AND status = 'accepted'
-                 LIMIT 1'
+                                 LIMIT 1"
             );
             $friendStmt->execute([':uid' => $user['id'], ':oid' => $ownerId]);
             if (!$friendStmt->fetch()) {

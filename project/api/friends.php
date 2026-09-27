@@ -36,8 +36,8 @@ if ($method === 'GET') {
     try {
         // フレンド一覧
         if ($action === 'list') {
-            $stmt = $pdo->prepare(
-                'SELECT u.id, u.username, u.email, f.created_at
+                        $stmt = $pdo->prepare(
+                                "SELECT u.id, u.username, u.email, f.created_at
                  FROM friends f
                  JOIN users u ON (
                     CASE 
@@ -47,7 +47,7 @@ if ($method === 'GET') {
                  )
                  WHERE (f.user_id = :user_id OR f.friend_id = :user_id)
                    AND f.status = 'accepted'
-                 ORDER BY f.created_at DESC'
+                                 ORDER BY f.created_at DESC"
             );
             $stmt->execute([':user_id' => $userId]);
             echo json_encode(['friends' => $stmt->fetchAll()]);
@@ -56,11 +56,11 @@ if ($method === 'GET') {
         // 受信した申請一覧
         elseif ($action === 'requests') {
             $stmt = $pdo->prepare(
-                'SELECT u.id, u.username, u.email, f.id as request_id, f.created_at
+                "SELECT u.id, u.username, u.email, f.id as request_id, f.created_at
                  FROM friends f
                  JOIN users u ON u.id = f.user_id
                  WHERE f.friend_id = :user_id AND f.status = 'pending'
-                 ORDER BY f.created_at DESC'
+                 ORDER BY f.created_at DESC"
             );
             $stmt->execute([':user_id' => $userId]);
             echo json_encode(['requests' => $stmt->fetchAll()]);
@@ -69,11 +69,11 @@ if ($method === 'GET') {
         // 送信した申請一覧
         elseif ($action === 'sent') {
             $stmt = $pdo->prepare(
-                'SELECT u.id, u.username, u.email, f.created_at
+                "SELECT u.id, u.username, u.email, f.created_at
                  FROM friends f
                  JOIN users u ON u.id = f.friend_id
                  WHERE f.user_id = :user_id AND f.status = 'pending'
-                 ORDER BY f.created_at DESC'
+                 ORDER BY f.created_at DESC"
             );
             $stmt->execute([':user_id' => $userId]);
             echo json_encode(['sent' => $stmt->fetchAll()]);
@@ -144,8 +144,8 @@ if ($method === 'POST') {
         
         // 申請作成
         $stmt = $pdo->prepare(
-            'INSERT INTO friends (user_id, friend_id, status, created_at)
-             VALUES (:user_id, :friend_id, 'pending', :created_at)'
+            "INSERT INTO friends (user_id, friend_id, status, created_at)
+             VALUES (:user_id, :friend_id, 'pending', :created_at)"
         );
         $stmt->execute([
             ':user_id' => $userId,
@@ -175,9 +175,9 @@ if ($method === 'PUT') {
     try {
         // 自分宛ての申請かチェック
         $stmt = $pdo->prepare(
-            'SELECT id FROM friends 
+            "SELECT id FROM friends 
              WHERE id = :id AND friend_id = :user_id AND status = 'pending'
-             LIMIT 1'
+             LIMIT 1"
         );
         $stmt->execute([':id' => $requestId, ':user_id' => $userId]);
         

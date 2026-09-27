@@ -1,0 +1,4 @@
+.git
+node_modules
+project/data/auth.sqlite
+project/data/*.sqlite-journal

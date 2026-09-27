@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CieloEmo - ホーム</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css?family=Sawarabi+Mincho" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Sawarabi Mincho', serif;
+            overflow: hidden;
+        }
+        
+        #nightSky {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #020617, #1e1b4b, #0c4a6e);
+            z-index: 0;
+        }
+
+        /* 星が多いときは縦スクロールで全て見られるようにする */
+        #starContainer {
+            position: absolute;
+            inset: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        #starContainer::-webkit-scrollbar {
+            width: 4px;
+        }
+        #starContainer::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.15);
+            border-radius: 4px;
+        }
+        
+        .star {
+            position: absolute;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: twinkle 3s ease-in-out infinite;
+        }
+        
+        .star:hover {
+            transform: scale(1.3);
+            z-index: 10;
+        }
+        
+        .star.favorite {
+            transform: scale(1.4);
+        }
+        
+        .star.favorite:hover {
+            transform: scale(1.6);
+        }
+
+        /* あなたを構成する五つの星（特別な星） */
+        .star.constellation {
+            animation: twinkle 3s ease-in-out infinite, constellationPulse 3.2s ease-in-out infinite;
+        }
+        .star.constellation:hover {
+            transform: scale(1.6);
+        }
+        /* 光の輪（控えめ） */
+        .star.constellation::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 220%;
+            height: 220%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 1px solid rgba(255, 236, 150, 0.4);
+            box-shadow: 0 0 4px 0.5px rgba(255, 220, 120, 0.35);
+            animation: ringRotate 10s linear infinite, ringBreathe 3.2s ease-in-out infinite;
+            pointer-events: none;
+        }
+        
+        @keyframes constellationPulse {
+            0%, 100% { filter: brightness(1); }
+            50%      { filter: brightness(1.25); }
+        }
+        @keyframes ringBreathe {
+            0%, 100% { opacity: 0.25; }
+            50%      { opacity: 0.55; }
+        }
+        @keyframes ringRotate {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to   { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        
+        /* 感情ごとのアニメーション速度 */
+        .star[data-emotion="感動した"] { animation-duration: 4s; }
+        .star[data-emotion="勇気をもらった"] { animation-duration: 2.5s; }
+        .star[data-emotion="嬉しかった"] { animation-duration: 2s; }
+        .star[data-emotion="安心した"] { animation-duration: 5s; }
+        .star[data-emotion="ユーモア"] { animation-duration: 6s; }
+        .star[data-emotion="考えさせられた"] { animation-duration: 4.5s; }
+        .star[data-emotion="人間関係"] { animation-duration: 2.2s; }
+        .star[data-emotion="希望を感じた"] { animation-duration: 3s; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        /* ── 星降りアニメーション ── */
+        @keyframes starFall {
+            0%   { transform: scale(1); opacity: 1; }
+            30%  { transform: scale(2.5); opacity: 1; }
+            60%  { transform: scale(1.8) translateY(20px); opacity: 0.9; }
+            100% { transform: scale(0.5) translateY(60px); opacity: 0; }
+        }
+
+        @keyframes rippleExpand {
+            0%   { transform: scale(0); opacity: 0.8; }
+            100% { transform: scale(6); opacity: 0; }
+        }
+
+        @keyframes skyDim {
+            0%   { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes modalReveal {
+            0%   { opacity: 0; transform: scale(0.92) translateY(12px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .star-falling {
+            animation: starFall 0.7s ease-in forwards !important;
+            pointer-events: none;
+            z-index: 200 !important;
+        }
+
+        #skyOverlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 49;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        #skyOverlay.active {
+            opacity: 1;
+        }
+
+        .star-ripple {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 55;
+            animation: rippleExpand 0.7s ease-out forwards;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 27, 75, 0.95));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: modalReveal 0.35s cubic-bezier(0.22,1,0.36,1) both;
+        }
+
+        /* スマホ対応 */
+        @media (max-width: 640px) {
+            .modal {
+                align-items: flex-end;
+            }
+            .modal-content {
+                width: 100%;
+                max-width: 100% !important;
+                max-height: 90vh;
+                padding: 1.25rem;
+                border-radius: 20px 20px 0 0;
+                border-bottom: none;
+            }
+            .action-buttons {
+                bottom: 1rem;
+                right: 1rem;
+            }
+            .floating-btn {
+                width: 56px;
+                height: 56px;
+                font-size: 1.75rem;
+            }
+        }
+
+        .header-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            background: rgba(2, 6, 23, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .action-buttons {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .floating-btn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(251, 191, 36, 0.4);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .floating-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 32px rgba(251, 191, 36, 0.6);
+        }
+    </style>
+</head>
+<body class="bg-slate-950">
+    <!-- ヘッダー -->
+    <div class="header-bar">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2 sm:gap-4 min-w-0">
+                <h1 class="text-lg sm:text-xl font-bold bg-gradient-to-r from-yellow-200 via-amber-300 to-yellow-100 bg-clip-text text-transparent whitespace-nowrap">
+                    CieloEmo
+                </h1>
+                <span id="userName" class="text-gray-300 text-sm truncate hidden sm:inline"></span>
+            </div>
+
+            <!-- PC用ナビ（sm以上で表示） -->
+            <div class="hidden sm:flex items-center gap-3 md:gap-4">
+                <button id="myPageBtn" class="text-gray-300 hover:text-yellow-300 transition text-sm whitespace-nowrap">
+                    マイページ
+                </button>
+                <button id="rankingBtn" class="text-gray-300 hover:text-yellow-300 transition text-sm whitespace-nowrap">
+                    ✨ 五つの星
+                </button>
+                <button id="friendsBtn" class="text-gray-300 hover:text-yellow-300 transition text-sm whitespace-nowrap">
+                    👥 フレンド
+                </button>
+                <button id="reflectBtn" class="text-gray-300 hover:text-yellow-300 transition text-sm whitespace-nowrap">
+                    🌌 振り返り
+                </button>
+                <button id="statsBtn" class="text-gray-300 hover:text-yellow-300 transition text-sm whitespace-nowrap">
+                    統計
+                </button>
+                <button id="searchBtn" class="text-gray-300 hover:text-yellow-300 transition text-sm whitespace-nowrap">
+                    検索
+                </button>
+                <button id="randomStarBtn" class="text-gray-300 hover:text-yellow-300 transition text-sm whitespace-nowrap" title="過去の言葉をランダムに呼び出す">
+                    🌠 ランダム
+                </button>
+                <a href="../api/logout.php" class="text-gray-300 hover:text-red-400 transition text-sm whitespace-nowrap">
+                    ログアウト
+                </a>
+            </div>
+
+            <!-- スマホ用ハンバーガーボタン（sm未満で表示） -->
+            <button id="menuToggleBtn" class="sm:hidden text-gray-200 text-2xl leading-none px-2" aria-label="メニュー">
+                ☰
+            </button>
+        </div>
+
+        <!-- スマホ用ドロップダウンメニュー -->
+        <div id="mobileMenu" class="sm:hidden hidden border-t border-white/10 bg-slate-950/90 backdrop-blur">
+            <button id="myPageBtnM"    class="mobile-menu-item w-full text-left px-6 py-3 text-gray-200 hover:bg-white/5 transition text-sm">マイページ</button>
+            <button id="rankingBtnM"   class="mobile-menu-item w-full text-left px-6 py-3 text-gray-200 hover:bg-white/5 transition text-sm">✨ 五つの星</button>
+            <button id="friendsBtnM"   class="mobile-menu-item w-full text-left px-6 py-3 text-gray-200 hover:bg-white/5 transition text-sm">👥 フレンド</button>
+            <button id="reflectBtnM"   class="mobile-menu-item w-full text-left px-6 py-3 text-gray-200 hover:bg-white/5 transition text-sm">🌌 振り返り</button>
+            <button id="statsBtnM"     class="mobile-menu-item w-full text-left px-6 py-3 text-gray-200 hover:bg-white/5 transition text-sm">統計</button>
+            <button id="searchBtnM"    class="mobile-menu-item w-full text-left px-6 py-3 text-gray-200 hover:bg-white/5 transition text-sm">検索</button>
+            <button id="randomStarBtnM" class="mobile-menu-item w-full text-left px-6 py-3 text-gray-200 hover:bg-white/5 transition text-sm">🌠 ランダム</button>
+            <a href="../api/logout.php" class="block w-full text-left px-6 py-3 text-red-400 hover:bg-white/5 transition text-sm">ログアウト</a>
+        </div>
+    </div>
+    
+    <!-- 夜空 -->
+    <div id="nightSky">
+        <canvas id="backgroundStars"></canvas>
+        <div id="starContainer"></div>
+    </div>
+
+    <!-- 星空切り替えバー -->
+    <div id="skyFilterBar"
+         class="fixed left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-2"
+         style="top: 68px;">
+        <!-- 範囲切り替え -->
+        <div class="flex items-center gap-1 bg-slate-900/70 backdrop-blur rounded-full px-1.5 py-1 border border-white/10">
+            <button class="sky-range-btn px-3 py-1 rounded-full text-xs transition" data-range="all">すべて</button>
+            <button class="sky-range-btn px-3 py-1 rounded-full text-xs transition" data-range="year">年</button>
+            <button class="sky-range-btn px-3 py-1 rounded-full text-xs transition" data-range="month">月</button>
+            <button class="sky-range-btn px-3 py-1 rounded-full text-xs transition" data-range="week">週</button>
+        </div>
+        <!-- 期間ナビ（all以外で表示） -->
+        <div id="skyPeriodNav" class="hidden items-center gap-3 bg-slate-900/70 backdrop-blur rounded-full px-3 py-1 border border-white/10">
+            <button id="periodPrev" class="text-gray-300 hover:text-yellow-300 transition text-sm">‹</button>
+            <span id="periodLabel" class="text-white text-xs min-w-[120px] text-center"></span>
+            <button id="periodNext" class="text-gray-300 hover:text-yellow-300 transition text-sm">›</button>
+        </div>
+        <!-- 星の数 -->
+        <span id="skyStarCount" class="text-xs text-gray-400"></span>
+    </div>
+
+    <!-- 星降りオーバーレイ -->
+    <div id="skyOverlay"></div>
+    
+    <!-- 言葉追加ボタン -->
+    <div class="action-buttons">
+        <div id="addQuoteBtn" class="floating-btn" title="言葉を追加">
+            +
+        </div>
+    </div>
+    
+    <!-- 言葉登録モーダル -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold text-white mb-6">新しい言葉を登録</h2>
+            <form id="addQuoteForm">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-1">言葉 <span class="text-red-400">*</span></label>
+                        <textarea id="quoteInput" rows="4" class="w-full bg-slate-800/50 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="心に残った言葉を入力してください" required></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-1">誰の言葉？</label>
+                        <input type="text" id="authorInput" class="w-full bg-slate-800/50 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="名">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-1">出典</label>
+                        <input type="text" id="sourceInput" class="w-full bg-slate-800/50 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="書籍名、映画名など">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-1">感動した理由</label>
+                        <textarea id="reasonInput" rows="3" class="w-full bg-slate-800/50 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="なぜこの言葉が心に残ったのか"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-2">感情 <span class="text-red-400">*</span></label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="emotion" value="感動した" class="text-purple-500" required>
+                                <span class="text-purple-300 text-sm">💜 感動した</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="emotion" value="勇気をもらった" class="text-yellow-500">
+                                <span class="text-yellow-300 text-sm">⭐ 勇気をもらった</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="emotion" value="嬉しかった" class="text-yellow-400">
+                                <span class="text-yellow-200 text-sm">✨ 嬉しかった</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="emotion" value="安心した" class="text-blue-400">
+                                <span class="text-blue-300 text-sm">💙 安心した</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="emotion" value="ユーモア" class="text-orange-500">
+                                <span class="text-orange-300 text-sm">😄 ユーモア</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="emotion" value="考えさせられた" class="text-gray-400">
+                                <span class="text-gray-300 text-sm">🤔 考えさせられた</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="emotion" value="人間関係" class="text-pink-400">
+                                <span class="text-pink-300 text-sm">🤝 人間関係</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="emotion" value="希望を感じた" class="text-green-400">
+                                <span class="text-green-300 text-sm">💚 希望を感じた</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div id="addMessage" class="mt-4 text-sm"></div>
+                <div class="flex gap-3 mt-6">
+                    <button type="submit" class="flex-1 bg-yellow-400 text-black font-bold py-3 rounded-lg hover:bg-yellow-300 transition">
+                        登録する
+                    </button>
+                    <button type="button" id="cancelAddBtn" class="px-6 bg-gray-700 text-white py-3 rounded-lg hover:bg-gray-600 transition">
+                        キャンセル
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 詳細モーダル -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content" style="max-width:560px">
+            <!-- ヘッダー -->
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div id="detailEmotion" class="text-2xl"></div>
+                    <span id="detailEmotionText" class="text-gray-300 text-sm"></span>
+                </div>
+                <button id="closeDetailBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+
+            <!-- 当時の記録 -->
+            <div class="space-y-3">
+                <p id="detailQuote" class="text-white text-lg leading-relaxed"></p>
+                <div class="flex items-center gap-4 text-sm text-gray-400">
+                    <span id="detailAuthor"></span>
+                    <span id="detailSource"></span>
+                </div>
+                <div class="border-t border-gray-700 pt-3">
+                    <p class="text-xs text-gray-500 mb-1">登録した時の感想</p>
+                    <p id="detailReason" class="text-gray-300 text-sm leading-relaxed"></p>
+                </div>
+                <div class="flex items-center justify-between border-t border-gray-700 pt-3">
+                    <span id="detailDate" class="text-xs text-gray-500"></span>
+                    <div class="flex items-center gap-3">
+                        <!-- 公開/非公開トグル -->
+                        <button id="publicToggleBtn"
+                            class="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition">
+                        </button>
+                        <button id="favoriteBtn" class="text-2xl transition hover:scale-110">☆</button>
+                    </div>
+                </div>
+                <!-- 編集・削除ボタン（自分の星のみ） -->
+                <div id="detailEditArea" class="flex gap-2 pt-1">
+                    <button id="editStarBtn"
+                        class="flex-1 flex items-center justify-center gap-1.5 text-xs text-gray-300 bg-slate-700/60 hover:bg-slate-600/60 px-3 py-2 rounded-lg transition">
+                        ✏️ 編集する
+                    </button>
+                    <button id="deleteStarBtn"
+                        class="flex items-center justify-center gap-1.5 text-xs text-red-400 bg-red-500/10 hover:bg-red-500/20 px-3 py-2 rounded-lg transition border border-red-500/30">
+                        🗑️ 削除
+                    </button>
+                </div>
+
+                <!-- 振り返りメモエリア -->
+                <div class="mt-5 border-t border-indigo-800/60 pt-5">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="text-lg">🪐</span>
+                        <h3 class="text-sm font-bold text-indigo-300">振り返りメモ</h3>
+                    </div>
+
+                    <!-- 過去のメモ一覧 -->
+                    <div id="detailReflectionList" class="space-y-3 mb-4 max-h-56 overflow-y-auto"></div>
+
+                    <!-- 新しいメモ入力 -->
+                    <div class="bg-indigo-950/50 border border-indigo-800/40 rounded-xl p-4">
+                        <p class="text-xs text-indigo-300 mb-2">今どう感じる？</p>
+                        <textarea id="detailReflectionInput" rows="3"
+                            class="w-full bg-transparent text-white text-sm rounded-lg focus:outline-none resize-none placeholder:text-indigo-400/50"
+                            placeholder="あの頃は〇〇だったけど、今は…"></textarea>
+                        <div class="flex items-center justify-between mt-3">
+                            <!-- 感情ピッカー（小） -->
+                            <div class="flex gap-1 flex-wrap" id="detailReflectionEmotionPicker">
+                                <button class="detail-ref-emo px-2 py-0.5 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="">なし</button>
+                                <button class="detail-ref-emo px-2 py-0.5 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="感動した">💜</button>
+                                <button class="detail-ref-emo px-2 py-0.5 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="勇気をもらった">⭐</button>
+                                <button class="detail-ref-emo px-2 py-0.5 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="嬉しかった">✨</button>
+                                <button class="detail-ref-emo px-2 py-0.5 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="安心した">💙</button>
+                                <button class="detail-ref-emo px-2 py-0.5 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="ユーモア">😄</button>
+                                <button class="detail-ref-emo px-2 py-0.5 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="考えさせられた">🤔</button>
+                                <button class="detail-ref-emo px-2 py-0.5 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="人間関係">🤝</button>
+                                <button class="detail-ref-emo px-2 py-0.5 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="希望を感じた">💚</button>
+                            </div>
+                            <button id="addDetailReflectionBtn"
+                                class="bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition flex-shrink-0 ml-2">
+                                メモを残す
+                            </button>
+                        </div>
+                        <p id="detailReflectionMsg" class="text-xs mt-2"></p>
+                    </div>
+                </div>
+
+                <!-- フレンドからのコメント -->
+                <div class="mt-5 border-t border-white/10 pt-5">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="text-lg">💬</span>
+                        <h3 class="text-sm font-bold text-gray-200">フレンドからのコメント</h3>
+                    </div>
+                    <div id="detailCommentList" class="space-y-2 mb-3 max-h-48 overflow-y-auto"></div>
+                    <div class="flex gap-2">
+                        <input id="detailCommentInput" type="text"
+                            class="flex-1 bg-slate-800/50 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 placeholder:text-gray-500"
+                            placeholder="返信する">
+                        <button id="detailCommentSendBtn"
+                            class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-4 py-2 rounded-lg transition">
+                            送信
+                        </button>
+                    </div>
+                    <p id="detailCommentMsg" class="text-xs mt-2"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 編集モーダル -->
+    <div id="editModal" class="modal">
+        <div class="modal-content" style="max-width:560px">
+            <div class="flex items-start justify-between mb-6">
+                <h2 class="text-xl font-bold text-white">✏️ 星を編集する</h2>
+                <button id="closeEditBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <form id="editQuoteForm">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-1">言葉 <span class="text-red-400">*</span></label>
+                        <textarea id="editQuoteInput" rows="4"
+                            class="w-full bg-slate-800/50 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                            required></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-1">作者</label>
+                        <input type="text" id="editAuthorInput"
+                            class="w-full bg-slate-800/50 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-1">出典</label>
+                        <input type="text" id="editSourceInput"
+                            class="w-full bg-slate-800/50 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-1">感動した理由</label>
+                        <textarea id="editReasonInput" rows="3"
+                            class="w-full bg-slate-800/50 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-2">感情 <span class="text-red-400">*</span></label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="editEmotion" value="感動した" required>
+                                <span class="text-purple-300 text-sm">💜 感動した</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="editEmotion" value="勇気をもらった">
+                                <span class="text-yellow-300 text-sm">⭐ 勇気をもらった</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="editEmotion" value="嬉しかった">
+                                <span class="text-yellow-200 text-sm">✨ 嬉しかった</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="editEmotion" value="安心した">
+                                <span class="text-blue-300 text-sm">💙 安心した</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="editEmotion" value="ユーモア">
+                                <span class="text-orange-300 text-sm">😄 ユーモア</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="editEmotion" value="考えさせられた">
+                                <span class="text-gray-300 text-sm">🤔 考えさせられた</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="editEmotion" value="人間関係">
+                                <span class="text-pink-300 text-sm">🤝 人間関係</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer bg-slate-800/30 hover:bg-slate-800/50 p-2 rounded">
+                                <input type="radio" name="editEmotion" value="希望を感じた">
+                                <span class="text-green-300 text-sm">💚 希望を感じた</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div id="editMessage" class="mt-4 text-sm"></div>
+                <div class="flex gap-3 mt-6">
+                    <button type="submit"
+                        class="flex-1 bg-yellow-400 text-black font-bold py-3 rounded-lg hover:bg-yellow-300 transition">
+                        保存する
+                    </button>
+                    <button type="button" id="cancelEditBtn"
+                        class="px-6 bg-gray-700 text-white py-3 rounded-lg hover:bg-gray-600 transition">
+                        キャンセル
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- フレンドモーダル -->
+    <div id="friendsModal" class="modal">
+        <div class="modal-content" style="max-width:700px; padding:0; overflow:hidden">
+            <div class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/10">
+                <h2 class="text-xl font-bold text-white">👥 フレンド</h2>
+                <button id="closeFriendsBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+
+            <!-- タブ -->
+            <div class="flex border-b border-white/10 text-sm">
+                <button class="friend-tab flex-1 py-3 text-gray-300 hover:text-white transition border-b-2 border-transparent"
+                        data-tab="list">フレンド一覧</button>
+                <button class="friend-tab flex-1 py-3 text-gray-300 hover:text-white transition border-b-2 border-transparent"
+                        data-tab="requests">申請受信 <span id="requestBadge" class="hidden ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full"></span></button>
+                <button class="friend-tab flex-1 py-3 text-gray-300 hover:text-white transition border-b-2 border-transparent"
+                        data-tab="add">フレンドを追加</button>
+                <button class="friend-tab flex-1 py-3 text-gray-300 hover:text-white transition border-b-2 border-transparent"
+                        data-tab="sky">夜空を見る</button>
+            </div>
+
+            <!-- タブコンテンツ -->
+            <div style="max-height:500px; overflow-y:auto">
+
+                <!-- フレンド一覧 -->
+                <div id="friendTab-list" class="friend-tab-content p-6">
+                    <div id="friendListContent">
+                        <p class="text-gray-500 text-sm text-center py-8">読み込み中…</p>
+                    </div>
+                </div>
+
+                <!-- 申請受信 -->
+                <div id="friendTab-requests" class="friend-tab-content hidden p-6">
+                    <div id="friendRequestsContent">
+                        <p class="text-gray-500 text-sm text-center py-8">読み込み中…</p>
+                    </div>
+                </div>
+
+                <!-- フレンドを追加 -->
+                <div id="friendTab-add" class="friend-tab-content hidden p-6">
+                    <p class="text-xs text-gray-400 mb-3">メールアドレスでユーザーを検索</p>
+                    <div class="flex gap-2 mb-4">
+                        <input id="friendSearchInput" type="text"
+                            class="flex-1 bg-slate-800/50 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                            placeholder="example@mail.com">
+                        <button id="friendSearchBtn"
+                            class="bg-yellow-400 text-black font-bold px-4 py-2 rounded-lg hover:bg-yellow-300 transition text-sm">
+                            検索
+                        </button>
+                    </div>
+                    <div id="friendSearchResults" class="space-y-2"></div>
+                </div>
+
+                <!-- 夜空を見る -->
+                <div id="friendTab-sky" class="friend-tab-content hidden p-6">
+                    <!-- フレンド選択（選ぶとフルスクリーンで夜空が開く） -->
+                    <div id="skyFriendPicker">
+                        <p class="text-xs text-gray-400 mb-2">見たいフレンドの夜空を選んでください</p>
+                        <div id="skyFriendList" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- フレンドの夜空（フルスクリーン専用画面） -->
+    <div id="friendSkyModal" class="modal" style="z-index:150">
+        <div style="width:100%; height:100%; position:relative; background:linear-gradient(to bottom,#020617,#1e1b4b,#0c4a6e); border-radius:0; padding:0; overflow:hidden; animation:none;">
+
+            <!-- ヘッダー -->
+            <div class="absolute top-0 left-0 right-0 z-20 bg-slate-950/80 backdrop-blur border-b border-white/10 px-4 sm:px-6 py-3 flex items-center justify-between">
+                <div>
+                    <p id="friendSkyOwnerLabel" class="text-white font-bold text-base sm:text-lg"></p>
+                    <p class="text-xs text-gray-400">フレンドの夜空</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button id="friendSkyRankingBtn" class="text-gray-300 hover:text-yellow-300 transition text-sm whitespace-nowrap">
+                        ✨ 五つの星
+                    </button>
+                    <button id="closeFriendSkyBtn" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+                </div>
+            </div>
+
+            <!-- 星空切り替えバー -->
+            <div class="absolute left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2" style="top:68px;">
+                <div class="flex items-center gap-1 bg-slate-900/70 backdrop-blur rounded-full px-1.5 py-1 border border-white/10">
+                    <button class="friend-sky-range-btn px-3 py-1 rounded-full text-xs transition" data-range="all">すべて</button>
+                    <button class="friend-sky-range-btn px-3 py-1 rounded-full text-xs transition" data-range="year">年</button>
+                    <button class="friend-sky-range-btn px-3 py-1 rounded-full text-xs transition" data-range="month">月</button>
+                    <button class="friend-sky-range-btn px-3 py-1 rounded-full text-xs transition" data-range="week">週</button>
+                </div>
+                <div id="friendSkyPeriodNav" class="hidden items-center gap-3 bg-slate-900/70 backdrop-blur rounded-full px-3 py-1 border border-white/10">
+                    <button id="friendPeriodPrev" class="text-gray-300 hover:text-yellow-300 transition text-sm">‹</button>
+                    <span id="friendPeriodLabel" class="text-white text-xs min-w-[120px] text-center"></span>
+                    <button id="friendPeriodNext" class="text-gray-300 hover:text-yellow-300 transition text-sm">›</button>
+                </div>
+                <span id="friendSkyStarCount" class="text-xs text-gray-400"></span>
+            </div>
+
+            <!-- 夜空本体（スクロール可） -->
+            <div id="friendStarContainer" class="absolute inset-0 overflow-y-auto overflow-x-hidden"></div>
+
+            <p class="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-gray-500 text-center px-4 z-10">
+                星をタップすると言葉・感想・振り返りを確認できます
+            </p>
+        </div>
+    </div>
+
+    <!-- フレンドの五つの星モーダル -->
+    <div id="friendRankingModal" class="modal" style="z-index:200">
+        <div class="modal-content" style="max-width:600px">
+            <div class="flex items-start justify-between mb-2">
+                <div>
+                    <h2 id="friendRankingTitle" class="text-2xl font-bold text-white">✨ 五つの星</h2>
+                    <p class="text-xs text-gray-400 mt-1">大切な言葉たち</p>
+                </div>
+                <button id="closeFriendRankingBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div id="friendRankingList" class="mt-4 space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- フレンドの星プレビューモーダル（夜空から星クリック時） -->
+    <div id="friendStarModal" class="modal" style="z-index:200">
+        <div class="modal-content" style="max-width:540px">
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div id="fStarEmotion" class="text-2xl"></div>
+                    <div>
+                        <span id="fStarEmotionText" class="text-gray-300 text-sm block"></span>
+                        <span id="fStarOwner" class="text-xs text-gray-500"></span>
+                    </div>
+                </div>
+                <button id="closeFriendStarBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <p id="fStarQuote" class="text-white text-lg leading-relaxed mb-3"></p>
+            <div class="flex gap-3 text-sm text-gray-400 mb-4">
+                <span id="fStarAuthor"></span>
+                <span id="fStarSource"></span>
+            </div>
+            <div class="border-t border-gray-700 pt-3 mb-4">
+                <p class="text-xs text-gray-500 mb-1">登録した時の感想</p>
+                <p id="fStarReason" class="text-gray-300 text-sm leading-relaxed"></p>
+            </div>
+
+            <div class="border-t border-indigo-800/60 pt-4 mb-4">
+                <p class="text-xs text-indigo-300 mb-2">🪐 フレンドの振り返り</p>
+                <div id="fStarReflectionList" class="space-y-2 max-h-40 overflow-y-auto"></div>
+            </div>
+            
+            <!-- 自分なりの感情と理由を入力 -->
+            <div id="copyStarForm" class="border-t border-gray-700 pt-4 mb-4 space-y-3">
+                <p class="text-xs text-indigo-300 mb-2">🌟 この星を自分の夜空に加える</p>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">あなたはどう感じた？</label>
+                    <div class="grid grid-cols-2 gap-1.5" id="copyEmotionPicker">
+                        <button class="copy-emo px-2 py-1.5 rounded text-xs bg-slate-800/50 text-gray-300 hover:bg-slate-700 transition" data-emotion="感動した">💜 感動した</button>
+                        <button class="copy-emo px-2 py-1.5 rounded text-xs bg-slate-800/50 text-gray-300 hover:bg-slate-700 transition" data-emotion="勇気をもらった">⭐ 勇気をもらった</button>
+                        <button class="copy-emo px-2 py-1.5 rounded text-xs bg-slate-800/50 text-gray-300 hover:bg-slate-700 transition" data-emotion="嬉しかった">✨ 嬉しかった</button>
+                        <button class="copy-emo px-2 py-1.5 rounded text-xs bg-slate-800/50 text-gray-300 hover:bg-slate-700 transition" data-emotion="安心した">💙 安心した</button>
+                        <button class="copy-emo px-2 py-1.5 rounded text-xs bg-slate-800/50 text-gray-300 hover:bg-slate-700 transition" data-emotion="ユーモア">😄 ユーモア</button>
+                        <button class="copy-emo px-2 py-1.5 rounded text-xs bg-slate-800/50 text-gray-300 hover:bg-slate-700 transition" data-emotion="考えさせられた">🤔 考えさせられた</button>
+                        <button class="copy-emo px-2 py-1.5 rounded text-xs bg-slate-800/50 text-gray-300 hover:bg-slate-700 transition" data-emotion="人間関係">🤝 人間関係</button>
+                        <button class="copy-emo px-2 py-1.5 rounded text-xs bg-slate-800/50 text-gray-300 hover:bg-slate-700 transition" data-emotion="希望を感じた">💚 希望を感じた</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">なぜこの言葉を加えたいのか？（任意）</label>
+                    <textarea id="copyReasonInput" rows="2"
+                        class="w-full bg-slate-800/50 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 placeholder:text-gray-500"
+                        placeholder="例: 今の自分にぴったりだから"></textarea>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-between border-t border-gray-700 pt-4">
+                <span id="fStarDate" class="text-xs text-gray-500"></span>
+                <button id="copyStarBtn"
+                    class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold px-4 py-2 rounded-lg transition">
+                    ✨ 自分の夜空に加える
+                </button>
+            </div>
+            <p id="copyStarMsg" class="text-xs mt-3 text-center"></p>
+
+            <!-- コメントエリア -->
+            <div class="mt-5 border-t border-white/10 pt-4">
+                <p class="text-xs text-gray-400 mb-3">💬 コメント</p>
+                <div id="fStarCommentList" class="space-y-2 mb-3 max-h-40 overflow-y-auto"></div>
+                <div class="flex gap-2">
+                    <input id="fStarCommentInput" type="text"
+                        class="flex-1 bg-slate-800/50 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 placeholder:text-gray-500"
+                        placeholder="ひとこと残す">
+                    <button id="fStarCommentSendBtn"
+                        class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-4 py-2 rounded-lg transition">
+                        送信
+                    </button>
+                </div>
+                <p id="fStarCommentMsg" class="text-xs mt-2"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 振り返りモーダル -->
+    <div id="reflectModal" class="modal">
+        <div class="modal-content" style="max-width:720px; padding:0; overflow:hidden">
+
+            <!-- ── フェーズ1: 星を選ぶ ── -->
+            <div id="reflectPhase1">
+                <div class="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/10">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">どの星を呼び戻す？</h2>
+                        <p class="text-xs text-gray-400 mt-0.5">過去に刻んだ言葉を選んでください</p>
+                    </div>
+                    <button id="closeReflectBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                </div>
+
+                <!-- テキスト検索 -->
+                <div class="px-6 pt-4">
+                    <input id="reflectSearchInput" type="text"
+                        class="w-full bg-slate-800/50 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400 placeholder:text-gray-500"
+                        placeholder="🔍 言葉・作者・出典で絞り込む（例: 宇宙）">
+                </div>
+
+                <!-- フィルター -->
+                <div class="px-6 pt-3 pb-2 flex flex-wrap gap-2" id="reflectEmotionFilter">
+                    <button class="reflect-filter-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 ring-2 ring-yellow-400" data-emotion="">すべて</button>
+                    <button class="reflect-filter-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="感動した">💜 感動した</button>
+                    <button class="reflect-filter-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="勇気をもらった">⭐ 勇気をもらった</button>
+                    <button class="reflect-filter-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="嬉しかった">✨ 嬉しかった</button>
+                    <button class="reflect-filter-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="安心した">💙 安心した</button>
+                    <button class="reflect-filter-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="ユーモア">😄 ユーモア</button>
+                    <button class="reflect-filter-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="考えさせられた">🤔 考えさせられた</button>
+                    <button class="reflect-filter-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="人間関係">🤝 人間関係</button>
+                    <button class="reflect-filter-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="希望を感じた">💚 希望を感じた</button>
+                </div>
+
+                <!-- 星リスト -->
+                <div id="reflectStarList" class="px-6 pb-6 overflow-y-auto" style="max-height:400px"></div>
+            </div>
+
+            <!-- ── フェーズ2: 呼び戻し演出 ── -->
+            <div id="reflectPhase2" class="hidden px-6 py-10 flex flex-col items-center justify-center text-center" style="min-height:300px">
+                <div id="summonStar" class="text-6xl mb-6 animate-pulse"></div>
+                <p class="text-white text-lg font-bold mb-2" id="summonQuotePreview"></p>
+                <p class="text-gray-400 text-sm">星が戻ってきます…</p>
+            </div>
+
+            <!-- ── フェーズ3: 振り返り記入 ── -->
+            <div id="reflectPhase3" class="hidden">
+                <!-- 戻るボタン -->
+                <div class="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-white/10">
+                    <button id="backToStarList" class="text-gray-400 hover:text-white text-sm flex items-center gap-1">
+                        ← 星を選び直す
+                    </button>
+                    <span class="text-gray-600">|</span>
+                    <span id="reflectEmotionBadge" class="text-sm"></span>
+                </div>
+
+                <!-- 呼び戻した言葉 -->
+                <div id="reflectQuoteCard" class="mx-6 my-4 rounded-2xl p-5 border border-white/10 relative overflow-hidden">
+                    <!-- グロー背景 -->
+                    <div id="reflectCardGlow" class="absolute inset-0 opacity-10 rounded-2xl"></div>
+                    <div class="relative z-10">
+                        <p id="reflectQuoteText" class="text-white text-base leading-relaxed mb-3"></p>
+                        <div class="flex gap-3 text-xs text-gray-400">
+                            <span id="reflectQuoteAuthor"></span>
+                            <span id="reflectQuoteSource"></span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2" id="reflectQuoteDate"></p>
+                        <div class="mt-3 pt-3 border-t border-white/10">
+                            <p class="text-xs text-gray-500 mb-1">当時の感想</p>
+                            <p id="reflectQuoteReason" class="text-gray-400 text-xs leading-relaxed"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 過去のメモ -->
+                <div class="mx-6 mb-4">
+                    <div id="reflectPastMemos" class="space-y-2 max-h-36 overflow-y-auto"></div>
+                </div>
+
+                <!-- メモ入力 -->
+                <div class="mx-6 mb-6 bg-indigo-950/60 border border-indigo-700/40 rounded-2xl p-4">
+                    <p class="text-xs text-indigo-300 mb-2">🪐 今の自分から</p>
+                    <textarea id="reflectMemoInput" rows="3"
+                        class="w-full bg-transparent text-white text-sm focus:outline-none resize-none placeholder:text-indigo-400/40"
+                        placeholder="あの頃は…　今は…"></textarea>
+                    <div class="flex items-center justify-between mt-3">
+                        <div class="flex gap-1 flex-wrap" id="reflectMemoPicker">
+                            <button class="rmemo-emo px-2 py-0.5 rounded-full text-xs bg-slate-700/80 text-gray-300 hover:bg-slate-600 transition" data-emotion="">なし</button>
+                            <button class="rmemo-emo px-2 py-0.5 rounded-full text-xs bg-slate-700/80 text-gray-300 hover:bg-slate-600 transition" data-emotion="感動した">💜</button>
+                            <button class="rmemo-emo px-2 py-0.5 rounded-full text-xs bg-slate-700/80 text-gray-300 hover:bg-slate-600 transition" data-emotion="勇気をもらった">⭐</button>
+                            <button class="rmemo-emo px-2 py-0.5 rounded-full text-xs bg-slate-700/80 text-gray-300 hover:bg-slate-600 transition" data-emotion="嬉しかった">✨</button>
+                            <button class="rmemo-emo px-2 py-0.5 rounded-full text-xs bg-slate-700/80 text-gray-300 hover:bg-slate-600 transition" data-emotion="安心した">💙</button>
+                            <button class="rmemo-emo px-2 py-0.5 rounded-full text-xs bg-slate-700/80 text-gray-300 hover:bg-slate-600 transition" data-emotion="ユーモア">😄</button>
+                            <button class="rmemo-emo px-2 py-0.5 rounded-full text-xs bg-slate-700/80 text-gray-300 hover:bg-slate-600 transition" data-emotion="考えさせられた">🤔</button>
+                            <button class="rmemo-emo px-2 py-0.5 rounded-full text-xs bg-slate-700/80 text-gray-300 hover:bg-slate-600 transition" data-emotion="人間関係">🤝</button>
+                            <button class="rmemo-emo px-2 py-0.5 rounded-full text-xs bg-slate-700/80 text-gray-300 hover:bg-slate-600 transition" data-emotion="希望を感じた">💚</button>
+                        </div>
+                        <button id="saveReflectMemoBtn"
+                            class="bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold px-4 py-1.5 rounded-lg transition flex-shrink-0 ml-2">
+                            メモを残す
+                        </button>
+                    </div>
+                    <p id="reflectMemoMsg" class="text-xs mt-2"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOP5ランキングモーダル -->
+    <div id="rankingModal" class="modal">
+        <div class="modal-content" style="max-width:600px">
+            <div class="flex items-start justify-between mb-2">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">✨ あなたを構成する五つの星</h2>
+                    <p class="text-xs text-gray-400 mt-1">今の自分を表す大切な言葉を5つ選ぼう</p>
+                </div>
+                <button id="closeRankingBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+
+            <!-- 表示モード -->
+            <div id="rankingView" class="mt-4">
+                <div id="rankingList" class="space-y-3"></div>
+                <button id="editRankingBtn"
+                    class="mt-6 w-full bg-yellow-400 text-black font-bold py-3 rounded-lg hover:bg-yellow-300 transition">
+                    星を選び直す
+                </button>
+            </div>
+
+            <!-- 編集モード -->
+            <div id="rankingEdit" class="mt-4 hidden">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-xs text-gray-400">星をタップして選ぼう（選んだ順に番号がつきます）</p>
+                    <span id="rankingSelectCount" class="text-xs font-bold text-yellow-300">0 / 5</span>
+                </div>
+                <!-- 星カードのグリッド（横3列・縦スクロール） -->
+                <div id="rankingGrid"
+                     class="grid grid-cols-2 sm:grid-cols-3 gap-2 overflow-y-auto pr-1"
+                     style="max-height:50vh"></div>
+                <div id="rankingEditMsg" class="mt-3 text-sm"></div>
+                <div class="flex gap-3 mt-5">
+                    <button id="saveRankingBtn"
+                        class="flex-1 bg-yellow-400 text-black font-bold py-3 rounded-lg hover:bg-yellow-300 transition">
+                        保存する
+                    </button>
+                    <button id="cancelRankingBtn"
+                        class="px-6 bg-gray-700 text-white py-3 rounded-lg hover:bg-gray-600 transition">
+                        キャンセル
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- マイページモーダル -->
+    <div id="myPageModal" class="modal">
+        <div class="modal-content" style="max-width:680px">
+            <div class="flex items-start justify-between mb-6">
+                <h2 class="text-2xl font-bold text-white">マイページ</h2>
+                <button id="closeMyPageBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <!-- サマリー -->
+            <div class="grid grid-cols-3 gap-3 mb-6">
+                <div class="bg-slate-800/60 rounded-xl p-4 text-center">
+                    <p class="text-gray-400 text-xs mb-1">総登録数</p>
+                    <p id="mpTotal" class="text-3xl font-bold text-yellow-300">0</p>
+                </div>
+                <div class="bg-slate-800/60 rounded-xl p-4 text-center">
+                    <p class="text-gray-400 text-xs mb-1">お気に入り</p>
+                    <p id="mpFavorite" class="text-3xl font-bold text-pink-300">0</p>
+                </div>
+                <div class="bg-slate-800/60 rounded-xl p-4 text-center">
+                    <p class="text-gray-400 text-xs mb-1">感情の種類</p>
+                    <p id="mpEmotionKinds" class="text-3xl font-bold text-purple-300">0</p>
+                </div>
+            </div>
+            <!-- お気に入り一覧 -->
+            <div class="mb-6">
+                <h3 class="text-base font-bold text-yellow-200 mb-3">★ お気に入りの言葉</h3>
+                <div id="mpFavoriteList" class="space-y-2 max-h-48 overflow-y-auto"></div>
+            </div>
+            <!-- 最近追加した言葉 -->
+            <div>
+                <h3 class="text-base font-bold text-gray-300 mb-3">最近追加した言葉</h3>
+                <div id="mpRecentList" class="space-y-2 max-h-48 overflow-y-auto"></div>
+            </div>
+            <div class="mt-6">
+                <h3 class="text-base font-bold text-indigo-300 mb-3">✨ フレンドが受け取った星</h3>
+                <div id="mpReceivedCopiesList" class="space-y-2 max-h-48 overflow-y-auto"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 検索モーダル -->
+    <div id="searchModal" class="modal">
+        <div class="modal-content" style="max-width:640px">
+            <div class="flex items-start justify-between mb-6">
+                <h2 class="text-2xl font-bold text-white">検索</h2>
+                <button id="closeSearchBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div class="flex gap-2 mb-4">
+                <input id="searchInput" type="text" class="flex-1 bg-slate-800/50 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="言葉・作者・出典で検索">
+                <button id="doSearchBtn" class="bg-yellow-400 text-black font-bold px-4 py-2 rounded-lg hover:bg-yellow-300 transition">検索</button>
+            </div>
+            <!-- 感情フィルター -->
+            <div class="mb-4">
+                <p class="text-sm text-gray-400 mb-2">感情で絞り込む</p>
+                <div class="flex flex-wrap gap-2" id="emotionFilter">
+                    <button class="emotion-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="">すべて</button>
+                    <button class="emotion-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="感動した">💜 感動した</button>
+                    <button class="emotion-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="勇気をもらった">⭐ 勇気をもらった</button>
+                    <button class="emotion-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="嬉しかった">✨ 嬉しかった</button>
+                    <button class="emotion-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="安心した">💙 安心した</button>
+                    <button class="emotion-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="ユーモア">😄 ユーモア</button>
+                    <button class="emotion-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="考えさせられた">🤔 考えさせられた</button>
+                    <button class="emotion-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="人間関係">🤝 人間関係</button>
+                    <button class="emotion-tag px-3 py-1 rounded-full text-xs bg-slate-700 text-gray-300 hover:bg-slate-600 transition" data-emotion="希望を感じた">💚 希望を感じた</button>
+                </div>
+            </div>
+            <!-- 検索結果 -->
+            <div id="searchResults" class="space-y-2 max-h-64 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- 統計モーダル -->
+    <div id="statsModal" class="modal">
+        <div class="modal-content">
+            <div class="flex items-start justify-between mb-6">
+                <h2 class="text-2xl font-bold text-white">統計</h2>
+                <button id="closeStatsBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <div class="bg-slate-800/50 p-4 rounded-lg">
+                    <p class="text-gray-400 text-sm">総登録数</p>
+                    <p id="totalCount" class="text-3xl font-bold text-yellow-300 mt-1">0</p>
+                </div>
+                <div class="bg-slate-800/50 p-4 rounded-lg">
+                    <p class="text-gray-400 text-sm">お気に入り数</p>
+                    <p id="favoriteCount" class="text-3xl font-bold text-pink-300 mt-1">0</p>
+                </div>
+                <div class="bg-slate-800/50 p-4 rounded-lg">
+                    <p class="text-gray-400 text-sm mb-3">感情の分布</p>
+                    <div id="emotionStats" class="space-y-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="../scripts/home.js"></script>
+</body>
+</html>
